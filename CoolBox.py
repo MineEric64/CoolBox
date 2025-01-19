@@ -8,6 +8,7 @@ DOCKER_ID = 'pyKrita_CoolBox'
 backColor = QColor(49, 49, 49)
 highlightColor = QColor(86, 128, 194)
 
+TOOL_INIT = False
 
 class Tool:
 
@@ -24,6 +25,7 @@ class Tool:
         self.action = action
         self.highlighted = False
         self.toolRect = QRect()
+        self.globalToolRect = QRect()
         pass
 
     def addSubTool(self, tool):
@@ -45,6 +47,13 @@ class Tool:
         
     def paint(self, painter, rect):
         self.toolRect = rect
+
+        if self.globalToolRect.isEmpty():
+            self.globalToolRect = rect
+
+        global TOOL_INIT
+        TOOL_INIT = True
+
         path = QPainterPath()
         path.addRoundedRect(QRectF(rect), 3, 3)
         color = highlightColor if self.isActivated or self.highlighted else backColor 
@@ -78,17 +87,35 @@ class Tool:
         self.highlighted = highlight
 
 class Popup(QWidget):
-    
-    def __init__(self):
+    def __init__(self, currentToolBox):
         super().__init__()
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.tool = Tool("", "", "")
-    
+        self.current_tool_index = -1
+        self.tools = []
+        self.setMouseTracking(True)
+        self.isDrawRect = False
+        self.drawRect = QRect(0, 0, 0, 0)
+        self.currentToolBox = currentToolBox
+
     def setTool(self, tool):
         self.tool = tool
         if len(self.tool.subTools) <= 0:
             return
         self.setFixedSize(45, 40 * len(self.tool.subTools))
+
+    def containsTools(self, pos):
+        for tool in self.tools:
+            if tool == self.tool:
+                continue
+            if tool.globalToolRect.contains(pos):
+                return True
+        return False
+
+    def setGlobalTools(self):
+        for tool in self.tools:
+            p = self.mapTo(Application.activeWindow().qwindow(), tool.globalToolRect.topLeft())
+            tool.globalToolRect.setTopLeft(p)
     
     def paintEvent(self, event):
         if len(self.tool.subTools) <= 0:
@@ -108,7 +135,8 @@ class Popup(QWidget):
         # draw the subtools
         topLeft = event.rect().topLeft() + QPoint(5, 0)
         size = QSize(40, 40)
-        drawRect = QRect(topLeft, size)
+        self.drawRect = QRect(topLeft, QSize(40, 40 * len(self.tool.subTools)))
+
         for tool in self.tool.subTools:
             drawRect = QRect(topLeft, size)
             tool.paint(painter, drawRect)
@@ -116,6 +144,21 @@ class Popup(QWidget):
         painter.end()
     
     def mouseMoveEvent(self, event):
+        p = self.currentToolBox.mapTo(Application.activeWindow().qwindow(), event.pos()) + QPoint(50, -5 + (45 * (self.current_tool_index - 1)))
+        #QtCore.qDebug(f"({p.x()}, {p.y()})")
+
+        if self.containsTools(p):
+            self.close()
+            pass
+
+        nowDrawRect = self.drawRect.contains(event.pos())
+
+        if not self.isDrawRect:
+            self.isDrawRect = nowDrawRect
+        elif not nowDrawRect:
+            self.isDrawRect = False
+            self.close()
+
         for tool in self.tool.subTools:
             tool.setHighlighted(tool.contains(event.pos()))
         self.update()
@@ -148,16 +191,19 @@ class ToolBox(QWidget):
     def __init__(self):
         super().__init__()
         self.tools = []
+        self.current_tool = -1
         self.timer = QTimer()
-        self.timer.setInterval(1000)
+        self.timer.setInterval(300)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.longPressed)
-        self.popup = Popup()
+        self.popup = Popup(self)
+        self.popupInit = False
         self.setMouseTracking(True)
         pass
     
     def addTool(self, tool):
         self.tools.append(tool)
+        self.popup.tools.append(tool)
 
     def paintEvent(self, event):
         painter = QPainter()
@@ -175,25 +221,46 @@ class ToolBox(QWidget):
         self.setFixedSize(50, 45 * len(self.tools) + 5)
 
     def mousePressEvent(self, event):
-        if event.button() != Qt.LeftButton :
-            return
+        #if event.button() != Qt.LeftButton :
+        #    return
 
-        for tool in self.tools:
+        for i in range(0, len(self.tools)):
+            tool = self.tools[i]
+
             if tool.contains(event.pos()) :
-                self.resetAllTools()
-                tool.activate(True)
-                self.update()
-                self.timer.start()
-                self.currentTool = tool
-                self.popup.move(self.mapTo(Application.activeWindow().qwindow(), tool.toolRect.topRight()))
+                self.select_tool(tool)
+                self.current_tool = i
+                self.popup.current_tool_index = i
                 break
+
+    def select_tool(self, tool):
+        self.resetAllTools()
+        tool.activate(True)
+        self.update()
+        self.timer.start()
+        self.currentTool = tool
+        self.popup.move(self.mapTo(Application.activeWindow().qwindow(), tool.toolRect.topRight()))
 
     def mouseReleaseEvent(self, event):
         self.timer.stop()
 
     def mouseMoveEvent(self, event):
-        for tool in self.tools:
-            tool.setHighlighted(tool.contains(event.pos()))
+        global TOOL_INIT
+        if (not self.popupInit) and TOOL_INIT:
+            self.popup.setGlobalTools()
+            self.popupInit = True
+
+        for i in range(0, len(self.tools)):
+            tool = self.tools[i]
+
+            if tool.contains(event.pos()):
+                tool.setHighlighted(True)
+                
+                if self.current_tool != i: # Enters other tool
+                    self.select_tool(tool)
+                    self.current_tool = i
+                self.popup.current_tool_index = i
+
         self.update()
     
     def leaveEvent(self, event):
