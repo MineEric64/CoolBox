@@ -11,6 +11,7 @@ Just an attempt to build a blender link toolbox, to see how people react to the 
 ## New Added Features
 - Showing Subtools after Mouse Hovering
 - Closing Popup Panel Automatically when Mouse Focus Out
+- Bug Fixed: Color Picker -> Color Sampler
 
 ## Setup
 Download the zip file from the releases tab and go to Tools -> Scripts -> Import Python Plugin. Follow the instructions there. After restarting Krita, you can see a new docker added to the Settings -> Dockers menu called CoolBox, just activate that and deactivate the original toolbox.
