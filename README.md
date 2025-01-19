@@ -1,12 +1,14 @@
 
 # CoolBox
+![image](https://github.com/user-attachments/assets/fd3be58f-82e8-482a-b5b8-708f5fb6aee9)
+
 #### A blender like tool box for krita
 #### Improved for Tablet PC
 
 ## Description
 Just an attempt to build a blender link toolbox, to see how people react to the new design.
 
-## Features
+## New Added Features
 - Showing Subtools after Mouse Hovering
 - Closing Popup Panel Automatically when Mouse Focus Out
 
