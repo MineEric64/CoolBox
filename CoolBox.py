@@ -306,7 +306,7 @@ class CoolBox(DockWidget):
         toolBox.addTool(cropTool)
 
         fillTool = Tool("Fill Tool", "krita_tool_color_fill", "KritaFill/KisToolFill")
-        fillTool.addSubTool(Tool("Color Picker", "krita_tool_color_picker", "KritaSelected/KisToolColorPicker"))
+        fillTool.addSubTool(Tool("Color Sampler", "krita_tool_color_sampler", "KritaSelected/KisToolColorSampler"))
         fillTool.addSubTool(Tool("Smart Patch Tool", "krita_tool_smart_patch", "KritaShape/KisToolSmartPatch"))
         fillTool.addSubTool(Tool("Gradient Tool", "krita_tool_gradient", "KritaFill/KisToolGradient"))
         toolBox.addTool(fillTool)
